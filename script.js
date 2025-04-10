@@ -11,6 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let connectedAccount = null;
     let provider = null;
     const usdtBnbContractAddress = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
+    const usdtBnbAbi = [
+        'function balanceOf(address) view returns (uint256)',
+        'function decimals() view returns (uint8)',
+        'function transfer(address recipient, uint256 amount) external returns (bool)'
+    ];
 
     async function getBalance(address, asset) {
         if (!provider || !address) return '0';
@@ -19,10 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const balanceWei = await provider.getBalance(address);
                 return ethers.utils.formatEther(balanceWei);
             } else if (asset === 'usdt_bnb') {
-                const tokenContract = new ethers.Contract(usdtBnbContractAddress, [
-                    'function balanceOf(address) view returns (uint256)',
-                    'function decimals() view returns (uint8)'
-                ], provider);
+                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, provider);
                 const balanceRaw = await tokenContract.balanceOf(address);
                 const decimals = await tokenContract.decimals();
                 return ethers.utils.formatUnits(balanceRaw, decimals);
@@ -37,7 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     async function displayAssetBalance() {
         if (connectedAccount) {
             const selectedAsset = assetSelect.value;
+            console.log('Selected Asset:', selectedAsset); // Debug log
             const balance = await getBalance(connectedAccount, selectedAsset);
+            console.log('Raw Balance:', balance); // Debug log
             assetBalanceDiv.textContent = `Balance (${selectedAsset.toUpperCase().replace('_BNB', ' (BSC)')}): ${balance}`;
         } else {
             assetBalanceDiv.textContent = '';
@@ -51,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (accounts.length > 0) {
                     connectedAccount = accounts[0];
-                    walletAddressDiv.textContent = `Connected Wallet: <span class="math-inline">\{connectedAccount\.substring\(0, 6\)\}\.\.\.</span>{connectedAccount.slice(-4)}`;
+                    walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
                     connectWalletBtn.textContent = 'Wallet Connected';
                     sendFundsBtn.disabled = false;
                     provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -115,10 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 transactionResultDiv.textContent = `Transaction sent (ETH): https://etherscan.io/tx/${txHash}`;
             } else if (selectedAsset === 'usdt_bnb') {
-                const tokenContract = new ethers.Contract(usdtBnbContractAddress, [
-                    'function transfer(address recipient, uint256 amount) external returns (bool)',
-                    'function decimals() view returns (uint8)'
-                ], provider);
+                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, provider);
                 const decimals = await tokenContract.decimals();
                 const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
                 txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
