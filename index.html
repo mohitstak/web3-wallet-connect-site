@@ -9,10 +9,10 @@
         body {
             background-color: white;
             color: black;
-            font-family: sans-serif; /* Or any other font you prefer */
+            font-family: sans-serif;
         }
         button {
-            background-color: lightgray; /* Or any color you like */
+            background-color: lightgray;
             color: black;
             padding: 10px 15px;
             border: 1px solid gray;
@@ -60,13 +60,14 @@
                 if (connectedAccount && provider) {
                     balancesDiv.innerHTML = 'Fetching balances...';
                     try {
-                        const network = await provider.getNetwork();
-                        console.log("Network:", network);
+                        //const network = await provider.getNetwork(); // Commented out
+                        const chainId = 56; // Manual BSC Mainnet chain ID
+                        console.log("Chain ID (Manual):", chainId);
 
                         let balances = {};
 
-                        if (network.chainId === 56) {
-                            balances['USDT'] = await getBalance(connectedAccount, 'USDT', provider);
+                        if (chainId === 56) { // Manual chain ID check
+                            balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
 
                             const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
                             const usdtBnbAbi = [
@@ -113,6 +114,8 @@
                             provider = new ethers.providers.Web3Provider(window.ethereum);
                             console.log('Connected address:', connectedAccount);
                             console.log('window.ethereum:', window.ethereum);
+                            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                            console.log('Chain ID:', chainId);
                             const network = await provider.getNetwork();
                             console.log('Network:', network);
                             displayBalances();
