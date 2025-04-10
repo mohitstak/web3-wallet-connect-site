@@ -25,12 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function displayBalances() {
+    async function displayBalances(chainId) {
         if (connectedAccount && provider) {
             balancesDiv.innerHTML = 'Fetching balances...';
             try {
-                const network = await provider.getNetwork();
-                console.log("Network:", network);
+                console.log("Using Chain ID:", chainId); // Log which chain ID is being used
 
                 let balances = {};
                 const tokenAddresses = {
@@ -46,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Get native token balance
                 const nativeBalance = await getBalance(connectedAccount, 'native', provider);
                 if (parseFloat(nativeBalance) > 0) {
-                    balances[network.nativeCurrency.symbol] = nativeBalance;
+                    balances[chainId === 56 ? 'BNB' : 'Native'] = nativeBalance; // Use BNB for BSC, Native for others
                 }
 
                 // Get ERC-20/BEP-20 token balances
@@ -87,11 +86,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     console.log('Connected address:', connectedAccount);
                     console.log('window.ethereum:', window.ethereum);
-                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                    console.log('Chain ID:', chainId);
-                    const network = await provider.getNetwork();
-                    console.log('Network:', network);
-                    displayBalances();
+                    let chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    console.log('Chain ID (window.ethereum):', chainId);
+                    chainId = parseInt(chainId, 16); // Convert hex to decimal
+                    if (chainId !== 56) {
+                        console.log("window.ethereum chainId is not 56, trying manual override");
+                        chainId = 56; // Manual override
+                    }
+                    displayBalances(chainId);
                 } else {
                     walletAddressDiv.textContent = 'No accounts found. Please connect your Trust Wallet.';
                 }
