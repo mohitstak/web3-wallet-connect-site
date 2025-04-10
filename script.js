@@ -28,48 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function displayBalances(chainId) {
         if (connectedAccount && provider) {
-            balancesDiv.innerHTML = 'Fetching balances...';
+            balancesDiv.innerHTML = 'Testing USDT contract...';
             try {
-                console.log("Using Chain ID:", chainId);
-
-                let balances = {};
-                const tokenAddresses = {
-                    'USDT (BSC)': '0x55d398326f99059fF775485246999027B3197955',
-                    // Add more token addresses here.
-                };
-
-                const tokenAbi = [
-                    'function balanceOf(address) view returns (uint256)',
-                    'function decimals() view returns (uint8)'
-                ];
-
-                // Get native token balance
-                const nativeBalance = await getBalance(connectedAccount, 'native', provider);
-                if (parseFloat(nativeBalance) > 0) {
-                    balances[chainId === 56 ? 'BNB' : 'Native'] = nativeBalance;
-                }
-
-                // Get ERC-20/BEP-20 token balances
-                for (const asset in tokenAddresses) {
-                    try {
-                        const tokenBalance = await getBalance(connectedAccount, asset, provider, tokenAddresses[asset], tokenAbi);
-                        if (parseFloat(tokenBalance) > 0) {
-                            balances[asset] = tokenBalance;
-                        }
-                    } catch (tokenError) {
-                        console.error(`Error fetching ${asset} balance:`, tokenError);
-                    }
-                }
-
-                let balancesText = 'Balances:<br>';
-                for (const asset in balances) {
-                    balancesText += `${asset}: ${balances[asset]}<br>`;
-                }
-                balancesDiv.innerHTML = balancesText;
-
+                const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
+                const usdtBnbAbi = ['function decimals() view returns (uint8)'];
+                const tokenContract = new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider);
+                const decimals = await tokenContract.decimals();
+                balancesDiv.innerHTML = `USDT decimals: ${decimals}`;
             } catch (error) {
-                console.error('Error displaying balances:', error);
-                balancesDiv.textContent = 'Error fetching balances.';
+                console.error('Error testing USDT contract:', error);
+                balancesDiv.innerHTML = 'Error testing USDT contract.';
             }
         } else {
             balancesDiv.textContent = '';
