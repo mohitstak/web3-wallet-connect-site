@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Wallet & Send USDT</title>
+    <title>Connect Wallet & Show USDT Balance</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 </head>
 <body>
     <button id="connectWalletBtn">Connect Wallet</button>
     <div id="walletAddress"></div>
+    <div id="usdtBalance"></div>
 
     <h2>Send USDT (BEP-20)</h2>
     <label for="recipientAddress">Recipient Address:</label>
@@ -25,6 +26,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const connectWalletBtn = document.getElementById('connectWalletBtn');
             const walletAddressDiv = document.getElementById('walletAddress');
+            const usdtBalanceDiv = document.getElementById('usdtBalance'); // New div to display balance
             const sendFundsBtn = document.getElementById('sendFundsBtn');
             const recipientAddressInput = document.getElementById('recipientAddress');
             const amountInput = document.getElementById('amount');
@@ -50,13 +52,15 @@
                 }
             }
 
-            async function updateUSDTAmount() {
+            async function displayUSDTBalance() {
                 if (connectedAccount) {
                     const balance = await getUSDTBalance(connectedAccount);
-                    // Set 99% of the balance
-                    const amountToSend = parseFloat(balance) * 0.99;
-                    amountInput.value = isNaN(amountToSend) ? '' : amountToSend.toString();
+                    usdtBalanceDiv.textContent = `USDT Balance: ${balance}`;
+                    // Optionally, you can also pre-fill the amount with 99% here if you want
+                    // const amountToSend = parseFloat(balance) * 0.99;
+                    // amountInput.value = isNaN(amountToSend) ? '' : amountToSend.toString();
                 } else {
+                    usdtBalanceDiv.textContent = '';
                     amountInput.value = '';
                 }
             }
@@ -72,12 +76,13 @@
                             sendFundsBtn.disabled = false;
                             provider = new ethers.providers.Web3Provider(window.ethereum);
                             console.log('Connected address:', connectedAccount);
-                            // Update USDT amount after successful connection
-                            updateUSDTAmount();
+                            // Display USDT balance after successful connection
+                            displayUSDTBalance();
                         } else {
                             walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
                             sendFundsBtn.disabled = true;
                             provider = null;
+                            usdtBalanceDiv.textContent = '';
                             amountInput.value = '';
                         }
                     } catch (error) {
@@ -85,12 +90,14 @@
                         walletAddressDiv.textContent = `Error connecting: ${error.message}`;
                         sendFundsBtn.disabled = true;
                         provider = null;
+                        usdtBalanceDiv.textContent = '';
                         amountInput.value = '';
                     }
                 } else {
                     walletAddressDiv.textContent = 'Web3 provider not found. Please install MetaMask or a compatible wallet.';
                     sendFundsBtn.disabled = true;
                     provider = null;
+                    usdtBalanceDiv.textContent = '';
                     amountInput.value = '';
                 }
             });
@@ -128,10 +135,6 @@
                     transactionResultDiv.textContent = `Transaction failed: ${error.message}`;
                 }
             });
-
-            // Attempt to update the USDT amount on initial load as well
-            updateUSDTAmount();
-
         });
     </script>
 </body>
