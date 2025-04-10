@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (accounts.length > 0) {
                     connectedAccount = accounts[0];
-                    walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
+                    walletAddressDiv.textContent = `Connected Wallet: <span class="math-inline">\{connectedAccount\.substring\(0, 6\)\}\.\.\.</span>{connectedAccount.slice(-4)}`;
                     connectWalletBtn.textContent = 'Wallet Connected';
                     sendFundsBtn.disabled = false;
                     provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -131,65 +131,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     sendFundsBtn.addEventListener('click', async () => {
-        if (!connectedAccount) {
-            transactionResultDiv.textContent = 'Please connect your wallet first.';
-            return;
-        }
-
-        const recipientAddress = recipientAddressInput.value;
-        const amountToSend = amountInput.value;
-        const selectedAsset = assetSelect.value;
-
-        if (!recipientAddress || !amountToSend || isNaN(amountToSend) || parseFloat(amountToSend) <= 0) {
-            transactionResultDiv.textContent = 'Please enter a valid recipient address and amount.';
-            return;
-        }
-
-        try {
-            let txHash;
-
-            if (selectedAsset === 'eth') {
-                const transactionParameters = {
-                    from: connectedAccount,
-                    to: recipientAddress,
-                    value: ethers.utils.parseEther(amountToSend).toHexString(),
-                    gas: '0x76c0',
-                    gasPrice: '0x9184e72a000',
-                };
-                txHash = await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [transactionParameters],
-                });
-                transactionResultDiv.textContent = `Transaction sent (ETH): https://etherscan.io/tx/${txHash}`;
-            } else if (selectedAsset === 'usdt_bnb') {
-                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, provider);
-                const decimals = await tokenContract.decimals();
-                const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
-                txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
-                transactionResultDiv.textContent = `Transaction sent (USDT on BSC): https://bscscan.com/tx/${txHash}`;
-            } else if (selectedAsset === 'bnb') {
-                const transactionParameters = {
-                    from: connectedAccount,
-                    to: recipientAddress,
-                    value: ethers.utils.parseEther(amountToSend).toHexString(),
-                    gas: '0x76c0',
-                    gasPrice: '0x9184e72a000',
-                };
-                txHash = await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [transactionParameters],
-                });
-                transactionResultDiv.textContent = `Transaction sent (BNB): https://bscscan.com/tx/${txHash}`;
-            } else {
-                transactionResultDiv.textContent = 'Unsupported asset selected.';
-                return;
-            }
-
-            console.log('Transaction Hash:', txHash);
-
-        } catch (error) {
-            console.error('Error sending transaction:', error);
-            transactionResultDiv.textContent = `Transaction failed: ${error.message}`;
-        }
-    });
-});
+        if (!connected
