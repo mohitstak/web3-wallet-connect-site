@@ -44,26 +44,27 @@
                     balancesDiv.innerHTML = 'Fetching balances...';
                     try {
                         const network = await provider.getNetwork();
+                        console.log("Network:", network); // Added network log
+
                         let balances = {};
 
                         if (network.chainId === 56) { // Binance Smart Chain Mainnet
                             balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
+
                             const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
                             const usdtBnbAbi = [
                                 'function balanceOf(address) view returns (uint256)',
                                 'function decimals() view returns (uint8)'
                             ];
-                            const usdtBalanceRaw = await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).balanceOf(connectedAccount);
-                            const usdtDecimals = await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).decimals();
-                            const usdtBalanceFormatted = ethers.utils.formatUnits(usdtBalanceRaw, usdtDecimals);
-                            balances['USDT (BSC)'] = usdtBalanceFormatted;
+
+                            const usdtBalanceRaw = await getBalance(connectedAccount, 'USDT', provider, usdtBnbAddress, usdtBnbAbi);
+                            balances['USDT (BSC)'] = usdtBalanceRaw;
 
                             //Debug logs
                             console.log("Connected Account:", connectedAccount);
-                            console.log("Network Chain ID:", network.chainId);
-                            console.log("USDT Balance Raw:", usdtBalanceRaw.toString());
-                            console.log("USDT Decimals:", usdtDecimals);
-                            console.log("USDT Balance Formatted:", usdtBalanceFormatted);
+                            console.log("USDT Balance Raw:", usdtBalanceRaw);
+                            console.log("USDT Decimals:", await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).decimals());
+                            console.log("USDT Balance Formatted:", balances['USDT (BSC)']);
 
                         } else {
                             balancesDiv.textContent = 'Unsupported Network';
