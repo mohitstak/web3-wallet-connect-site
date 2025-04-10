@@ -79,8 +79,9 @@
             connectWalletBtn.addEventListener('click', async () => {
                 if (typeof window.ethereum !== 'undefined') {
                     try {
+                        // Request accounts, which triggers the wallet connection prompt.
                         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                        if (accounts.length > 0) {
+                        if (accounts && accounts.length > 0) {
                             connectedAccount = accounts[0];
                             walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
                             connectWalletBtn.textContent = 'Wallet Connected';
@@ -92,10 +93,10 @@
                         }
                     } catch (error) {
                         console.error('Error connecting to Trust Wallet:', error);
-                        walletAddressDiv.textContent = `Error connecting: ${error.message}`;
+                        walletAddressDiv.textContent = `Connection error: ${error.message}`;
                     }
                 } else {
-                    walletAddressDiv.textContent = 'Web3 provider not found. Please open Trust Wallet or a compatible wallet browser.';
+                    walletAddressDiv.textContent = 'Wallet provider not detected. Open in Trust Wallet browser.';
                 }
             });
         });
