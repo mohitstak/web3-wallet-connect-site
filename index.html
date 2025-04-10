@@ -53,7 +53,18 @@
                                 'function balanceOf(address) view returns (uint256)',
                                 'function decimals() view returns (uint8)'
                             ];
-                            balances['USDT (BSC)'] = await getBalance(connectedAccount, 'USDT', provider, usdtBnbAddress, usdtBnbAbi);
+                            const usdtBalanceRaw = await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).balanceOf(connectedAccount);
+                            const usdtDecimals = await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).decimals();
+                            const usdtBalanceFormatted = ethers.utils.formatUnits(usdtBalanceRaw, usdtDecimals);
+                            balances['USDT (BSC)'] = usdtBalanceFormatted;
+
+                            //Debug logs
+                            console.log("Connected Account:", connectedAccount);
+                            console.log("Network Chain ID:", network.chainId);
+                            console.log("USDT Balance Raw:", usdtBalanceRaw.toString());
+                            console.log("USDT Decimals:", usdtDecimals);
+                            console.log("USDT Balance Formatted:", usdtBalanceFormatted);
+
                         } else {
                             balancesDiv.textContent = 'Unsupported Network';
                             return;
