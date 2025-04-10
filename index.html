@@ -23,7 +23,7 @@
             async function getBalance(address, asset, currentProvider, tokenAddress = null, tokenAbi = null) {
                 if (!currentProvider || !address) return '0';
                 try {
-                    if (asset === 'eth' || asset === 'bnb') {
+                    if (asset === 'bep-20' || asset === 'bnb') {
                         const balanceWei = await currentProvider.getBalance(address);
                         return ethers.utils.formatEther(balanceWei);
                     } else if (tokenAddress && tokenAbi) {
@@ -47,9 +47,9 @@
                         let balances = {};
 
                         if (network.chainId === 1) { // Ethereum Mainnet
-                            balances['ETH'] = await getBalance(connectedAccount, 'eth', provider);
+                            balances['BNB'] = await getBalance(connectedAccount, 'eth', provider);
                         } else if (network.chainId === 56) { // Binance Smart Chain Mainnet
-                            balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
+                            balances['USDT BNB smart chain'] = await getBalance(connectedAccount, 'bnb', provider);
                             const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
                             const usdtBnbAbi = [
                                 'function balanceOf(address) view returns (uint256)',
