@@ -27,6 +27,9 @@
                         const balanceWei = await currentProvider.getBalance(address);
                         return ethers.utils.formatEther(balanceWei);
                     } else if (tokenAddress && tokenAbi) {
+                        console.log("USDT getBalance Provider:", currentProvider); // Log provider
+                        const network = await currentProvider.getNetwork();
+                        console.log("USDT getBalance Network:", network); // Log network
                         const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, currentProvider);
                         const balanceRaw = await tokenContract.balanceOf(address);
                         const decimals = await tokenContract.decimals();
