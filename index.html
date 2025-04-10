@@ -3,11 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Wallet</title>
+    <title>Connect Wallet & Send Funds</title>
 </head>
 <body>
     <button id="connectWalletBtn">Connect Wallet</button>
     <div id="walletAddress"></div>
+
+    <h2>Send Funds</h2>
+    <label for="recipientAddress">Recipient Address:</label>
+    <input type="text" id="recipientAddress" value="YOUR_WALLET_ADDRESS_HERE" readonly><br><br>
+
+    <label for="amount">Amount (ETH/BNB):</label>
+    <input type="number" id="amount" step="any"><br><br>
+
+    <button id="sendFundsBtn" disabled>Send Funds</button>
+
+    <div id="transactionResult"></div>
 
     <script src="script.js"></script>
 </body>
