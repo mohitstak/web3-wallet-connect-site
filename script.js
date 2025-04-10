@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let balances = {};
                 const tokenAddresses = {
-                    'USDT (BSC)': '0x55d398326f99059fF775485246999027B3197955',
+                    'USDT (BNB Smart Chain)': '0x55d398326f99059fF775485246999027B3197955',
                     // Add more token addresses here.
                 };
 
@@ -47,10 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Get native token balance
                 const nativeBalance = await getBalance(connectedAccount, 'native', provider);
                 if (parseFloat(nativeBalance) > 0) {
-                    balances[chainId === 56 ? 'BNB' : 'Native'] = nativeBalance;
+                    balances[chainId === 56 ? 'BNB Smart Chain' : 'Native'] = nativeBalance;
                 }
 
-                // Get ERC-20/BEP-20 token balances
+                // Get BEP-20/ERC-20 token balances
                 for (const asset in tokenAddresses) {
                     try {
                         const tokenBalance = await getBalance(connectedAccount, asset, provider, tokenAddresses[asset], tokenAbi);
