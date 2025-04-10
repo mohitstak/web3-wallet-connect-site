@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (accounts.length > 0) {
                     connectedAccount = accounts[0];
-                    walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
+                    walletAddressDiv.textContent = `Connected Wallet: <span class="math-inline">\{connectedAccount\.substring\(0, 6\)\}\.\.\.</span>{connectedAccount.slice(-4)}`;
                     connectWalletBtn.textContent = 'Wallet Connected';
                     sendFundsBtn.disabled = false;
                     provider = new ethers.providers.Web3Provider(window.ethereum);
