@@ -3,10 +3,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const walletAddressDiv = document.getElementById('walletAddress');
     const sendFundsBtn = document.getElementById('sendFundsBtn');
     const recipientAddressInput = document.getElementById('recipientAddress');
+    const assetSelect = document.getElementById('asset');
     const amountInput = document.getElementById('amount');
     const transactionResultDiv = document.getElementById('transactionResult');
 
     let connectedAccount = null;
+
+    // Example contract addresses for BUSD and USDT on BSC (REPLACE WITH ACTUAL ADDRESSES)
+    const busdContractAddress = '0xe9e7CEA3DedcAe846fa077101708178003cdE6a';
+    const usdtContractAddress = '0x55d398326f99059fF775485246999027B3197955';
 
     connectWalletBtn.addEventListener('click', async () => {
         if (typeof window.ethereum !== 'undefined') {
@@ -42,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const recipientAddress = recipientAddressInput.value;
         const amountToSend = amountInput.value;
+        const selectedAsset = assetSelect.value;
 
         if (!recipientAddress || !amountToSend || isNaN(amountToSend) || parseFloat(amountToSend) <= 0) {
             transactionResultDiv.textContent = 'Please enter a valid recipient address and amount.';
@@ -49,20 +55,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const transactionParameters = {
-                from: connectedAccount,
-                to: recipientAddress,
-                value: ethers.utils.parseEther(amountToSend).toHexString(), // Convert amount to Wei (for Ether/BNB)
-                gas: '0x76c0', // Example gas limit
-                gasPrice: '0x9184e72a000', // Example gas price
-            };
+            let txHash;
 
-            const txHash = await window.ethereum.request({
-                method: 'eth_sendTransaction',
-                params: [transactionParameters],
-            });
+            if (selectedAsset === 'bnb') {
+                const transactionParameters = {
+                    from: connectedAccount,
+                    to: recipientAddress,
+                    value: ethers.utils.parseEther(amountToSend).toHexString(), // Amount in Wei
+                    gas: '0x76c0',
+                    gasPrice: '0x9184e72a000',
+                };
+                txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [transactionParameters],
+                });
+            } else if (selectedAsset === 'busd' || selectedAsset === 'usdt') {
+                // For BEP-20 tokens, we need to interact with the contract
+                const tokenContractAddress = selectedAsset === 'busd' ? busdContractAddress : usdtContractAddress;
+                const tokenContract = new ethers.Contract(tokenContractAddress, [
+                    'function transfer(address recipient, uint256 amount) external returns (bool)',
+                    // You might need to fetch the number of decimals for the token
+                ], new ethers.providers.Web3Provider(window.ethereum));
 
-            transactionResultDiv.textContent = `Transaction sent: https://etherscan.io/tx/${txHash}`; // Replace with appropriate explorer URL
+                // Assuming the token has 18 decimals (common for many BEP-20 tokens)
+                const amountToSendWei = ethers.utils.parseUnits(amountToSend, 18).toHexString();
+
+                txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
+            } else {
+                transactionResultDiv.textContent = 'Unsupported asset selected.';
+                return;
+            }
+
+            transactionResultDiv.textContent = `Transaction sent: https://bscscan.com/tx/${txHash}`; // Use BSCScan for BSC network
             console.log('Transaction Hash:', txHash);
 
         } catch (error) {
