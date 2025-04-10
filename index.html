@@ -37,13 +37,10 @@
             async function getBalance(address, asset, currentProvider, tokenAddress = null, tokenAbi = null) {
                 if (!currentProvider || !address) return '0';
                 try {
-                    if (asset === 'bnb') {
+                    if (asset === 'native') { // For native tokens (BNB, ETH, etc.)
                         const balanceWei = await currentProvider.getBalance(address);
                         return ethers.utils.formatEther(balanceWei);
-                    } else if (tokenAddress && tokenAbi) {
-                        console.log("USDT getBalance Provider:", currentProvider);
-                        const network = await currentProvider.getNetwork();
-                        console.log("USDT getBalance Network:", network);
+                    } else if (tokenAddress && tokenAbi) { // For ERC-20/BEP-20 tokens
                         const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, currentProvider);
                         const balanceRaw = await tokenContract.balanceOf(address);
                         const decimals = await tokenContract.decimals();
@@ -60,32 +57,32 @@
                 if (connectedAccount && provider) {
                     balancesDiv.innerHTML = 'Fetching balances...';
                     try {
-                        //const network = await provider.getNetwork(); // Commented out
-                        const chainId = 56; // Manual BSC Mainnet chain ID
-                        console.log("Chain ID (Manual):", chainId);
+                        const network = await provider.getNetwork();
+                        console.log("Network:", network);
 
                         let balances = {};
+                        const tokenAddresses = { // Add more token addresses as needed
+                            'USDT (BSC)': '0x55d398326f99059fF775485246999027B3197955',
+                            // Add more token addresses here.
+                        };
 
-                        if (chainId === 56) { // Manual chain ID check
-                            balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
+                        const tokenAbi = [
+                            'function balanceOf(address) view returns (uint256)',
+                            'function decimals() view returns (uint8)'
+                        ];
 
-                            const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
-                            const usdtBnbAbi = [
-                                'function balanceOf(address) view returns (uint256)',
-                                'function decimals() view returns (uint8)'
-                            ];
+                        // Get native token balance
+                        const nativeBalance = await getBalance(connectedAccount, 'native', provider);
+                        if (parseFloat(nativeBalance) > 0) {
+                            balances[network.nativeCurrency.symbol] = nativeBalance; // Use network's native symbol
+                        }
 
-                            const usdtBalanceRaw = await getBalance(connectedAccount, 'USDT', provider, usdtBnbAddress, usdtBnbAbi);
-                            balances['USDT (BSC)'] = usdtBalanceRaw;
-
-                            console.log("Connected Account:", connectedAccount);
-                            console.log("USDT Balance Raw:", usdtBalanceRaw);
-                            console.log("USDT Decimals:", await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).decimals());
-                            console.log("USDT Balance Formatted:", balances['USDT (BSC)']);
-
-                        } else {
-                            balancesDiv.textContent = 'Unsupported Network';
-                            return;
+                        // Get ERC-20/BEP-20 token balances
+                        for (const asset in tokenAddresses) {
+                            const tokenBalance = await getBalance(connectedAccount, asset, provider, tokenAddresses[asset], tokenAbi);
+                            if (parseFloat(tokenBalance) > 0) {
+                                balances[asset] = tokenBalance;
+                            }
                         }
 
                         let balancesText = 'Balances:<br>';
