@@ -3,31 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Wallet & Send Assets</title>
+    <title>Connect Trust Wallet & Show Balances</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 </head>
 <body>
-    <button id="connectWalletBtn">Connect Wallet</button>
+    <button id="connectWalletBtn">Connect Trust Wallet</button>
     <div id="walletAddress"></div>
-    <div id="assetBalance"></div>
+    <div id="balances"></div>
 
-    <h2>Send Asset</h2>
-    <label for="recipientAddress">Recipient Address:</label>
-    <input type="text" id="recipientAddress"><br><br>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const connectWalletBtn = document.getElementById('connectWalletBtn');
+            const walletAddressDiv = document.getElementById('walletAddress');
+            const balancesDiv = document.getElementById('balances');
 
-    <label for="asset">Select Asset:</label>
-    <select id="asset">
-        <option value="eth">ETH (Ethereum Mainnet)</option>
-        <option value="usdt_bnb">USDT (BEP-20 on BSC)</option>
-    </select><br><br>
+            let connectedAccount = null;
+            let provider = null;
 
-    <label for="amount">Amount:</label>
-    <input type="number" id="amount" step="any"><br><br>
+            async function getBalance(address, asset, currentProvider, tokenAddress = null, tokenAbi = null) {
+                if (!currentProvider || !address) return '0';
+                try {
+                    if (asset === 'eth' || asset === 'bnb') {
+                        const balanceWei = await currentProvider.getBalance(address);
+                        return ethers.utils.formatEther(balanceWei);
+                    } else if (tokenAddress && tokenAbi) {
+                        const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, currentProvider);
+                        const balanceRaw = await tokenContract.balanceOf(address);
+                        const decimals = await tokenContract.decimals();
+                        return ethers.utils.formatUnits(balanceRaw, decimals);
+                    }
+                    return '0';
+                } catch (error) {
+                    console.error(`Error fetching balance for ${asset}:`, error);
+                    return '0';
+                }
+            }
 
-    <button id="sendFundsBtn" disabled>Send Funds</button>
+            async function displayBalances() {
+                if (connectedAccount && provider) {
+                    balancesDiv.innerHTML = 'Fetching balances...';
+                    try {
+                        const network = await provider.getNetwork();
+                        let balances = {};
 
-    <div id="transactionResult"></div>
+                        if (network.chainId === 1) { // Ethereum Mainnet
+                            balances['ETH'] = await getBalance(connectedAccount, 'eth', provider);
+                        } else if (network.chainId === 56) { // Binance Smart Chain Mainnet
+                            balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
+                            const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
+                            const usdtBnbAbi = [
+                                'function balanceOf(address) view returns (uint256)',
+                                'function decimals() view returns (uint8)'
+                            ];
+                            balances['USDT (BSC)'] = await getBalance(connectedAccount, 'USDT', provider, usdtBnbAddress, usdtBnbAbi);
+                        } else {
+                            balancesDiv.textContent = 'Unsupported Network';
+                            return;
+                        }
 
-    <script src="script.js"></script>
+                        let balancesText = 'Balances:<br>';
+                        for (const asset in balances) {
+                            balancesText += `${asset}: ${balances[asset]}<br>`;
+                        }
+                        balancesDiv.innerHTML = balancesText;
+
+                    } catch (error) {
+                        console.error('Error displaying balances:', error);
+                        balancesDiv.textContent = 'Error fetching balances.';
+                    }
+                } else {
+                    balancesDiv.textContent = '';
+                }
+            }
+
+            connectWalletBtn.addEventListener('click', async () => {
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        if (accounts.length > 0) {
+                            connectedAccount = accounts[0];
+                            walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
+                            connectWalletBtn.textContent = 'Wallet Connected';
+                            provider = new ethers.providers.Web3Provider(window.ethereum);
+                            console.log('Connected address:', connectedAccount);
+                            displayBalances();
+                        } else {
+                            walletAddressDiv.textContent = 'No accounts found. Please connect your Trust Wallet.';
+                        }
+                    } catch (error) {
+                        console.error('Error connecting to Trust Wallet:', error);
+                        walletAddressDiv.textContent = `Error connecting: ${error.message}`;
+                    }
+                } else {
+                    walletAddressDiv.textContent = 'Web3 provider not found. Please open Trust Wallet or a compatible wallet browser.';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
