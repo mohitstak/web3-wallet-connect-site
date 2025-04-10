@@ -17,14 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'function transfer(address recipient, uint256 amount) external returns (bool)'
     ];
 
-    async function getBalance(address, asset) {
-        if (!provider || !address) return '0';
+    async function getBalance(address, asset, currentProvider) {
+        if (!currentProvider || !address) return '0';
         try {
             if (asset === 'eth') {
-                const balanceWei = await provider.getBalance(address);
+                const balanceWei = await currentProvider.getBalance(address);
                 return ethers.utils.formatEther(balanceWei);
             } else if (asset === 'usdt_bnb') {
-                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, provider);
+                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, currentProvider);
                 const balanceRaw = await tokenContract.balanceOf(address);
                 const decimals = await tokenContract.decimals();
                 return ethers.utils.formatUnits(balanceRaw, decimals);
@@ -36,16 +36,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function displayAssetBalance() {
-        if (connectedAccount) {
-            const selectedAsset = assetSelect.value;
-            console.log('Selected Asset:', selectedAsset); // Debug log
-            const balance = await getBalance(connectedAccount, selectedAsset);
-            console.log('Raw Balance:', balance); // Debug log
-            assetBalanceDiv.textContent = `Balance (${selectedAsset.toUpperCase().replace('_BNB', ' (BSC)')}): ${balance}`;
+    async function displayAllBalances() {
+        if (connectedAccount && provider) {
+            const network = await provider.getNetwork();
+            let balancesText = 'Balances: ';
+
+            if (network.chainId === 1) { // Ethereum Mainnet
+                const ethBalance = await getBalance(connectedAccount, 'eth', provider);
+                balancesText += `ETH: ${ethBalance} `;
+            } else if (network.chainId === 56) { // Binance Smart Chain Mainnet
+                const usdtBalance = await getBalance(connectedAccount, 'usdt_bnb', provider);
+                balancesText += `USDT (BSC): ${usdtBalance} `;
+            } else {
+                balancesText += 'Unsupported Network';
+            }
+
+            assetBalanceDiv.textContent = balancesText;
         } else {
             assetBalanceDiv.textContent = '';
-            amountInput.value = '';
         }
     }
 
@@ -60,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     sendFundsBtn.disabled = false;
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     console.log('Connected address:', connectedAccount);
-                    displayAssetBalance();
+                    displayAllBalances();
                 } else {
                     walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
                     sendFundsBtn.disabled = true;
@@ -85,7 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    assetSelect.addEventListener('change', displayAssetBalance);
+    assetSelect.addEventListener('change', () => {
+        // You might want to update the UI based on the selected asset here
+    });
 
     sendFundsBtn.addEventListener('click', async () => {
         if (!connectedAccount) {
