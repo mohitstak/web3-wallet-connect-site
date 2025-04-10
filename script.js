@@ -1,134 +1,85 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const connectWalletBtn = document.getElementById('connectWalletBtn');
-    const walletAddressDiv = document.getElementById('walletAddress');
-    const assetBalanceDiv = document.getElementById('assetBalance');
-    const sendFundsBtn = document.getElementById('sendFundsBtn');
-    const recipientAddressInput = document.getElementById('recipientAddress');
-    const assetSelect = document.getElementById('asset');
-    const amountInput = document.getElementById('amount');
-    const transactionResultDiv = document.getElementById('transactionResult');
+// This is a simplified example demonstrating how to interact with a blockchain using Java.
+// Note: You'll need to use a library like Web3j to interact with Ethereum or other EVM-compatible blockchains.
+// This example requires Web3j and relevant dependencies.
 
-    let connectedAccount = null;
-    let provider = null;
-    const usdtBnbContractAddress = '0x55d398326f99059fF775485246999027B3197955'; // USDT on BSC
-    const usdtBnbAbi = [
-        'function balanceOf(address) view returns (uint256)',
-        'function decimals() view returns (uint8)',
-        'function transfer(address recipient, uint256 amount) external returns (bool)'
-    ];
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.methods.response.EthGetBalance;
+import org.web3j.protocol.http.HttpService;
+import org.web3j.utils.Convert;
 
-    async function getBalance(address, asset, currentProvider) {
-        if (!currentProvider || !address) return '0';
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.concurrent.ExecutionException;
+
+public class WalletBalance {
+
+    public static void main(String[] args) {
+        String walletAddress = "0xYourWalletAddress"; // Replace with your wallet address
+        String rpcUrl = "https://mainnet.infura.io/v3/YourInfuraApiKey"; // Replace with your RPC URL (e.g., Infura)
+
+        Web3j web3 = Web3j.build(new HttpService(rpcUrl));
+
         try {
-            if (asset === 'eth') {
-                const balanceWei = await currentProvider.getBalance(address);
-                return ethers.utils.formatEther(balanceWei);
-            } else if (asset === 'usdt_bnb') {
-                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, currentProvider);
-                const balanceRaw = await tokenContract.balanceOf(address);
-                const decimals = await tokenContract.decimals();
-                return ethers.utils.formatUnits(balanceRaw, decimals);
-            } else if (asset === 'bnb') {
-                const balanceWei = await currentProvider.getBalance(address);
-                return ethers.utils.formatEther(balanceWei);
-            }
-            return '0';
-        } catch (error) {
-            console.error(`Error fetching balance for ${asset}:`, error);
-            return '0';
+            EthGetBalance ethGetBalance = web3.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).sendAsync().get();
+            BigInteger balanceWei = ethGetBalance.getBalance();
+
+            // Convert Wei to Ether
+            BigDecimal balanceEther = Convert.fromWei(balanceWei.toString(), Convert.Unit.ETHER);
+
+            System.out.println("Wallet Balance: " + balanceEther + " ETH");
+
+        } catch (InterruptedException | ExecutionException e) {
+            System.err.println("Error fetching balance: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            web3.shutdown();
         }
     }
+}
 
-    async function displayAllBalances() {
-        if (connectedAccount && provider) {
-            const network = await provider.getNetwork();
-            let balances = {};
+// Example to get ERC-20 token balance. Requires web3j-codegen and the contract ABI.
 
-            if (network.chainId === 1) { // Ethereum Mainnet
-                balances['ETH'] = await getBalance(connectedAccount, 'eth', provider);
-            } else if (network.chainId === 56) { // Binance Smart Chain Mainnet
-                balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
-                balances['USDT (BSC)'] = await getBalance(connectedAccount, 'usdt_bnb', provider);
-            } else {
-                assetBalanceDiv.textContent = 'Unsupported Network';
-                return;
-            }
+// 1. Generate java wrappers for your ERC20 token contract.
+// using web3j-codegen.
+// Example:
+// web3j solidity generate -b /path/to/your/ERC20.bin -a /path/to/your/ERC20.abi -o /path/to/output/java -p com.yourpackage
 
-            let balancesText = 'Balances: ';
-            for (const asset in balances) {
-                balancesText += `${asset}: ${balances[asset]} `;
-            }
-            assetBalanceDiv.textContent = balancesText;
+import com.yourpackage.ERC20; // Replace with your generated contract wrapper package
+import org.web3j.crypto.Credentials;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.http.HttpService;
+import org.web3j.utils.Convert;
 
-            // Update the asset dropdown based on the detected network
-            assetSelect.innerHTML = '<option value="">Select Asset</option>';
-            if (network.chainId === 1) {
-                const ethOption = new Option('ETH (Ethereum Mainnet)', 'eth');
-                assetSelect.add(ethOption);
-            } else if (network.chainId === 56) {
-                const bnbOption = new Option('BNB (Binance Smart Chain)', 'bnb');
-                assetSelect.add(bnbOption);
-                const usdtOption = new Option('USDT (BEP-20 on BSC)', 'usdt_bnb');
-                assetSelect.add(usdtOption);
-            }
-        } else {
-            assetBalanceDiv.textContent = '';
-            assetSelect.innerHTML = '<option value="">Select Asset</option>';
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.concurrent.ExecutionException;
+
+public class TokenBalance {
+
+    public static void main(String[] args) throws Exception {
+        String walletAddress = "0xYourWalletAddress"; // Replace with your wallet address
+        String contractAddress = "0xYourContractAddress"; // Replace with your token contract address
+        String rpcUrl = "https://mainnet.infura.io/v3/YourInfuraApiKey"; // Replace with your RPC URL
+
+        Web3j web3 = Web3j.build(new HttpService(rpcUrl));
+        Credentials credentials = Credentials.create("0x0000000000000000000000000000000000000000000000000000000000000000"); // dummy credentials, as you're only reading.
+
+        ERC20 contract = ERC20.load(contractAddress, web3, credentials, BigInteger.ZERO, BigInteger.ZERO);
+
+        try {
+            BigInteger balanceRaw = contract.balanceOf(walletAddress).sendAsync().get();
+            BigInteger decimals = contract.decimals().sendAsync().get();
+
+            BigDecimal balance = Convert.fromWei(balanceRaw.toString(), decimals);
+
+            System.out.println("Token Balance: " + balance + " Tokens");
+
+        } catch (InterruptedException | ExecutionException e) {
+            System.err.println("Error fetching token balance: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            web3.shutdown();
         }
     }
-
-    connectWalletBtn.addEventListener('click', async () => {
-        if (typeof window.ethereum !== 'undefined') {
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                if (accounts.length > 0) {
-                    connectedAccount = accounts[0];
-                    walletAddressDiv.textContent = `Connected Wallet: <span class="math-inline">\{connectedAccount\.substring\(0, 6\)\}\.\.\.</span>{connectedAccount.slice(-4)}`;
-                    connectWalletBtn.textContent = 'Wallet Connected';
-                    sendFundsBtn.disabled = false;
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    console.log('Connected address:', connectedAccount);
-
-                    // Log the network information
-                    const network = await provider.getNetwork();
-                    console.log('Connected Network:', network);
-
-                    displayAllBalances();
-                } else {
-                    walletAddressDiv.textContent = 'No accounts found. Please connect your wallet.';
-                    sendFundsBtn.disabled = true;
-                    provider = null;
-                    assetBalanceDiv.textContent = '';
-                    assetSelect.innerHTML = '<option value="">Select Asset</option>';
-                    amountInput.value = '';
-                }
-            } catch (error) {
-                console.error('Error connecting to wallet:', error);
-                walletAddressDiv.textContent = `Error connecting: ${error.message}`;
-                sendFundsBtn.disabled = true;
-                provider = null;
-                assetBalanceDiv.textContent = '';
-                assetSelect.innerHTML = '<option value="">Select Asset</option>';
-                amountInput.value = '';
-            }
-        } else {
-            walletAddressDiv.textContent = 'Web3 provider not found. Please install MetaMask or a compatible wallet.';
-            sendFundsBtn.disabled = true;
-            provider = null;
-            assetBalanceDiv.textContent = '';
-            assetSelect.innerHTML = '<option value="">Select Asset</option>';
-            amountInput.value = '';
-        }
-    });
-
-    // Update displayed balance when the selected asset changes
-    assetSelect.addEventListener('change', async () => {
-        if (connectedAccount && provider) {
-            const selectedAsset = assetSelect.value;
-            const balance = await getBalance(connectedAccount, selectedAsset, provider);
-            assetBalanceDiv.textContent = `Balance (${selectedAsset.toUpperCase().replace('_BNB', ' (BSC)')}): ${balance}`;
-        }
-    });
-
-    sendFundsBtn.addEventListener('click', async () => {
-        if (!connected
+}
