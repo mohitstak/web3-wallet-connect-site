@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function getBalance(address, asset, currentProvider, tokenAddress = null, tokenAbi = null) {
         if (!currentProvider || !address) return '0';
         try {
+            console.log("getBalance Provider Network:", await currentProvider.getNetwork()); // Log provider network
             if (asset === 'native') {
                 const balanceWei = await currentProvider.getBalance(address);
                 return ethers.utils.formatEther(balanceWei);
@@ -92,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('window.ethereum:', window.ethereum);
                     let chainId = 56; // Force chain ID to 56
                     console.log('Chain ID (forced):', chainId);
+                    console.log('Provider:', provider); // Log the provider object
                     displayBalances(chainId);
                 } else {
                     walletAddressDiv.textContent = 'No accounts found. Please connect your Trust Wallet.';
