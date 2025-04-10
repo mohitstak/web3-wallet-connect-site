@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return ethers.utils.formatEther(balanceWei);
             } else if (tokenAddress && tokenAbi) {
                 const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, currentProvider);
+                console.log("Token Contract:", tokenContract); // Log the contract instance
+                console.log("Address to check:", address); // Log the address
                 const balanceRaw = await tokenContract.balanceOf(address);
                 const decimals = await tokenContract.decimals();
                 return ethers.utils.formatUnits(balanceRaw, decimals);
@@ -29,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (connectedAccount && provider) {
             balancesDiv.innerHTML = 'Fetching balances...';
             try {
-                console.log("Using Chain ID:", chainId); // Log which chain ID is being used
+                console.log("Using Chain ID:", chainId);
 
                 let balances = {};
                 const tokenAddresses = {
@@ -45,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Get native token balance
                 const nativeBalance = await getBalance(connectedAccount, 'native', provider);
                 if (parseFloat(nativeBalance) > 0) {
-                    balances[chainId === 56 ? 'BNB' : 'Native'] = nativeBalance; // Use BNB for BSC, Native for others
+                    balances[chainId === 56 ? 'BNB' : 'Native'] = nativeBalance;
                 }
 
                 // Get ERC-20/BEP-20 token balances
@@ -88,10 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('window.ethereum:', window.ethereum);
                     let chainId = await window.ethereum.request({ method: 'eth_chainId' });
                     console.log('Chain ID (window.ethereum):', chainId);
-                    chainId = parseInt(chainId, 16); // Convert hex to decimal
+                    chainId = parseInt(chainId, 16);
                     if (chainId !== 56) {
                         console.log("window.ethereum chainId is not 56, trying manual override");
-                        chainId = 56; // Manual override
+                        chainId = 56;
                     }
                     displayBalances(chainId);
                 } else {
