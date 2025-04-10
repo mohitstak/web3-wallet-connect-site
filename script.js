@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const balanceRaw = await tokenContract.balanceOf(address);
                 const decimals = await tokenContract.decimals();
                 return ethers.utils.formatUnits(balanceRaw, decimals);
+            } else if (asset === 'bnb') {
+                const balanceWei = await currentProvider.getBalance(address);
+                return ethers.utils.formatEther(balanceWei);
             }
             return '0';
         } catch (error) {
@@ -39,21 +42,38 @@ document.addEventListener('DOMContentLoaded', () => {
     async function displayAllBalances() {
         if (connectedAccount && provider) {
             const network = await provider.getNetwork();
-            let balancesText = 'Balances: ';
+            let balances = {};
 
             if (network.chainId === 1) { // Ethereum Mainnet
-                const ethBalance = await getBalance(connectedAccount, 'eth', provider);
-                balancesText += `ETH: ${ethBalance} `;
+                balances['ETH'] = await getBalance(connectedAccount, 'eth', provider);
             } else if (network.chainId === 56) { // Binance Smart Chain Mainnet
-                const usdtBalance = await getBalance(connectedAccount, 'usdt_bnb', provider);
-                balancesText += `USDT (BSC): ${usdtBalance} `;
+                balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
+                balances['USDT (BSC)'] = await getBalance(connectedAccount, 'usdt_bnb', provider);
             } else {
-                balancesText += 'Unsupported Network';
+                assetBalanceDiv.textContent = 'Unsupported Network';
+                return;
             }
 
+            let balancesText = 'Balances: ';
+            for (const asset in balances) {
+                balancesText += `${asset}: ${balances[asset]} `;
+            }
             assetBalanceDiv.textContent = balancesText;
+
+            // Update the asset dropdown based on the detected network
+            assetSelect.innerHTML = '';
+            if (network.chainId === 1) {
+                const ethOption = new Option('ETH (Ethereum Mainnet)', 'eth');
+                assetSelect.add(ethOption);
+            } else if (network.chainId === 56) {
+                const bnbOption = new Option('BNB (Binance Smart Chain)', 'bnb');
+                assetSelect.add(bnbOption);
+                const usdtOption = new Option('USDT (BEP-20 on BSC)', 'usdt_bnb');
+                assetSelect.add(usdtOption);
+            }
         } else {
             assetBalanceDiv.textContent = '';
+            assetSelect.innerHTML = '<option value="">Select Asset</option>';
         }
     }
 
@@ -63,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (accounts.length > 0) {
                     connectedAccount = accounts[0];
-                    walletAddressDiv.textContent = `Connected Wallet: ${connectedAccount.substring(0, 6)}...${connectedAccount.slice(-4)}`;
+                    walletAddressDiv.textContent = `Connected Wallet: <span class="math-inline">\{connectedAccount\.substring\(0, 6\)\}\.\.\.</span>{connectedAccount.slice(-4)}`;
                     connectWalletBtn.textContent = 'Wallet Connected';
                     sendFundsBtn.disabled = false;
                     provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -74,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     sendFundsBtn.disabled = true;
                     provider = null;
                     assetBalanceDiv.textContent = '';
+                    assetSelect.innerHTML = '<option value="">Select Asset</option>';
                     amountInput.value = '';
                 }
             } catch (error) {
@@ -82,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sendFundsBtn.disabled = true;
                 provider = null;
                 assetBalanceDiv.textContent = '';
+                assetSelect.innerHTML = '<option value="">Select Asset</option>';
                 amountInput.value = '';
             }
         } else {
@@ -89,61 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
             sendFundsBtn.disabled = true;
             provider = null;
             assetBalanceDiv.textContent = '';
+            assetSelect.innerHTML = '<option value="">Select Asset</option>';
             amountInput.value = '';
         }
     });
 
-    assetSelect.addEventListener('change', () => {
-        // You might want to update the UI based on the selected asset here
-    });
-
-    sendFundsBtn.addEventListener('click', async () => {
-        if (!connectedAccount) {
-            transactionResultDiv.textContent = 'Please connect your wallet first.';
-            return;
-        }
-
-        const recipientAddress = recipientAddressInput.value;
-        const amountToSend = amountInput.value;
-        const selectedAsset = assetSelect.value;
-
-        if (!recipientAddress || !amountToSend || isNaN(amountToSend) || parseFloat(amountToSend) <= 0) {
-            transactionResultDiv.textContent = 'Please enter a valid recipient address and amount.';
-            return;
-        }
-
-        try {
-            let txHash;
-
-            if (selectedAsset === 'eth') {
-                const transactionParameters = {
-                    from: connectedAccount,
-                    to: recipientAddress,
-                    value: ethers.utils.parseEther(amountToSend).toHexString(),
-                    gas: '0x76c0',
-                    gasPrice: '0x9184e72a000',
-                };
-                txHash = await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [transactionParameters],
-                });
-                transactionResultDiv.textContent = `Transaction sent (ETH): https://etherscan.io/tx/${txHash}`;
-            } else if (selectedAsset === 'usdt_bnb') {
-                const tokenContract = new ethers.Contract(usdtBnbContractAddress, usdtBnbAbi, provider);
-                const decimals = await tokenContract.decimals();
-                const amountToSendWei = ethers.utils.parseUnits(amountToSend, decimals).toHexString();
-                txHash = await tokenContract.transfer(recipientAddress, amountToSendWei);
-                transactionResultDiv.textContent = `Transaction sent (USDT on BSC): https://bscscan.com/tx/${txHash}`;
-            } else {
-                transactionResultDiv.textContent = 'Unsupported asset selected.';
-                return;
-            }
-
-            console.log('Transaction Hash:', txHash);
-
-        } catch (error) {
-            console.error('Error sending transaction:', error);
-            transactionResultDiv.textContent = `Transaction failed: ${error.message}`;
-        }
-    });
-});
+    // Update displayed balance when the selected asset changes
+    asset
