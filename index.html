@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect Trust Wallet & Show Balances</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        body {
+            background-color: white;
+            color: black;
+            font-family: sans-serif; /* Or any other font you prefer */
+        }
+        button {
+            background-color: lightgray; /* Or any color you like */
+            color: black;
+            padding: 10px 15px;
+            border: 1px solid gray;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <button id="connectWalletBtn">Connect Trust Wallet</button>
@@ -27,9 +41,9 @@
                         const balanceWei = await currentProvider.getBalance(address);
                         return ethers.utils.formatEther(balanceWei);
                     } else if (tokenAddress && tokenAbi) {
-                        console.log("USDT getBalance Provider:", currentProvider); // Log provider
+                        console.log("USDT getBalance Provider:", currentProvider);
                         const network = await currentProvider.getNetwork();
-                        console.log("USDT getBalance Network:", network); // Log network
+                        console.log("USDT getBalance Network:", network);
                         const tokenContract = new ethers.Contract(tokenAddress, tokenAbi, currentProvider);
                         const balanceRaw = await tokenContract.balanceOf(address);
                         const decimals = await tokenContract.decimals();
@@ -47,11 +61,11 @@
                     balancesDiv.innerHTML = 'Fetching balances...';
                     try {
                         const network = await provider.getNetwork();
-                        console.log("Network:", network); // Added network log
+                        console.log("Network:", network);
 
                         let balances = {};
 
-                        if (network.chainId === 56) { // Binance Smart Chain Mainnet
+                        if (network.chainId === 56) {
                             balances['BNB'] = await getBalance(connectedAccount, 'bnb', provider);
 
                             const usdtBnbAddress = '0x55d398326f99059fF775485246999027B3197955';
@@ -63,7 +77,6 @@
                             const usdtBalanceRaw = await getBalance(connectedAccount, 'USDT', provider, usdtBnbAddress, usdtBnbAbi);
                             balances['USDT (BSC)'] = usdtBalanceRaw;
 
-                            //Debug logs
                             console.log("Connected Account:", connectedAccount);
                             console.log("USDT Balance Raw:", usdtBalanceRaw);
                             console.log("USDT Decimals:", await new ethers.Contract(usdtBnbAddress, usdtBnbAbi, provider).decimals());
@@ -99,6 +112,9 @@
                             connectWalletBtn.textContent = 'Wallet Connected';
                             provider = new ethers.providers.Web3Provider(window.ethereum);
                             console.log('Connected address:', connectedAccount);
+                            console.log('window.ethereum:', window.ethereum);
+                            const network = await provider.getNetwork();
+                            console.log('Network:', network);
                             displayBalances();
                         } else {
                             walletAddressDiv.textContent = 'No accounts found. Please connect your Trust Wallet.';
